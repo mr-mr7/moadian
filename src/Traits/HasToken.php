@@ -9,15 +9,15 @@ trait HasToken
 {
     /**
      * Create authorization token
-     * 
+     *
      * @param SignatureService $signer
-     * 
+     *
      */
     public function addToken(SignatureService $signer)
     {
         $payload = [
-            'nonce'    => Moadian::getNonce(),
-            'clientId' => config('moadian.username')
+            'nonce' => Moadian::getNonce(),
+            'clientId' => Moadian::getUsername(),
         ];
 
         $token = $signer->sign($payload);

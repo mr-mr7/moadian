@@ -1,4 +1,5 @@
 <?php
+
 namespace Jooyeshgar\Moadian;
 
 use GuzzleHttp\Client;
@@ -18,38 +19,81 @@ use Jooyeshgar\Moadian\Services\SignatureService;
 
 class Moadian
 {
+    protected string $username;
     private Client $client;
     private SignatureService $signer;
     private EncryptionService $encryptor;
     private Response $response;
 
-    public function __construct($privateKey, $certificate, $baseUri ='https://tp.tax.gov.ir/requestsmanager/api/v2/')
+    public function __construct(string $username = '', string $privateKeyPath = '', string $certificatePath = '')
     {
         $this->client = new Client([
-            'base_uri' => $baseUri,
-            'headers'  => ['Content-Type' => 'application/json'],
-            'timeout'  => 60
+            'base_uri' => config('moadian.base_url'),
+            'headers' => ['Content-Type' => 'application/json'],
+            'timeout' => 60
         ]);
+        if ($username & $privateKeyPath & $certificatePath) {
+            $this->initialize($username, $privateKeyPath, $certificatePath);
+        }
+    }
+
+    /**
+     * Static method to create instance with custom credentials
+     */
+    public function initialize($username, $privateKeyPath, $certificatePath)
+    {
+        if (empty($username) || empty($privateKeyPath) || empty($certificatePath)) {
+            throw new \Exception('Missing username OR private key Or certificate');
+        }
+
+        $this->username = $username;
+        $privateKey = file_get_contents(storage_path($privateKeyPath));
+        $certificate = file_get_contents(storage_path($certificatePath));
+        $certificate = str_replace("\r\n", '', $certificate);
+
         $this->signer = new SignatureService($privateKey, $certificate);
         $this->encryptor = new EncryptionService();
         $this->response = new Response();
+
+        return $this;
+    }
+
+    /**
+     * Static method to create instance for specific user
+     */
+    public function forUser($user)
+    {
+        if (!config('moadian.multi_moadi')) {
+            return $this;
+        }
+        $userModel = config('moadian.multi_moadi_settings.user_model');
+        $user = $user instanceof $userModel ? $user : app($userModel)::findOrFail($user);
+        if (!$user || !$user->hasMoadianCredentials()) {
+            throw new \Exception("Moadian credentials not found for user ID: {$user}");
+        }
+
+        $credentials = $user->getMoadianCredentials();
+        return $this->initialize($credentials['username'], $credentials['private_key_path'], $credentials['certificate_path']);
     }
 
     /**
      * Sends a request to the API server.
-     * 
+     *
      * @param Request $request The request to send.
      * @return mixed The response from API server.
      */
     public function sendRequest(Request $request)
     {
+        if (empty($this->username) || empty($this->signer)) {
+            throw new \Exception('Missing username or private key Or certificate. Using Moadian::forUser() Or set multi_moadi=false in moadian.php');
+        }
         $request->prepare($this->signer, $this->encryptor);
 
         $body = !empty($request->getBody()) ? json_encode($request->getBody()) : null;
         $httpResp = $this->client->request($request->method, $request->path, [
-            'body'    => $body,
+            'body' => $body,
             'headers' => $request->getHeaders(),
-            'query'   => $request->getParams()
+            'query' => $request->getParams()
         ]);
 
         return $this->response->setResponse($httpResp);
@@ -61,12 +105,17 @@ class Moadian
 
         $response = $this->sendRequest($request);
 
-        if($response->isSuccessful()){
+        if ($response->isSuccessful()) {
             $result = $response->getBody();
-            return $result['nonce']; 
+            return $result['nonce'];
         }
 
         throw new MoadianException('Unable to retrieve Token');
+    }
+
+    public function getUsername()
+    {
+        return $this->username;
     }
 
     public function getServerInfo()

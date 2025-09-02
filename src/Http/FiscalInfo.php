@@ -2,6 +2,7 @@
 
 namespace Jooyeshgar\Moadian\Http;
 
+use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Services\EncryptionService;
 use Jooyeshgar\Moadian\Services\SignatureService;
 use Jooyeshgar\Moadian\Traits\HasToken;
@@ -15,7 +16,7 @@ class FiscalInfo extends Request
         parent::__construct();
 
         $this->path = 'fiscal-information';
-        $this->params['memoryId'] = config('moadian.username');
+        $this->params['memoryId'] = Moadian::getUsername();
     }
 
     public function prepare(SignatureService $signer, EncryptionService $encryptor)

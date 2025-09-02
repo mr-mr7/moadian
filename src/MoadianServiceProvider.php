@@ -14,23 +14,17 @@ class MoadianServiceProvider extends ServiceProvider
     public function register()
     {
         $this->mergeConfigFrom(
-            __DIR__.'/config/moadian.php', 'moadian'
+            __DIR__ . '/config/moadian.php', 'moadian'
         );
 
-        $this->app->bind('Jooyeshgar\Moadian\Moadian', function ($app) {
-
+        $this->app->singleton('Jooyeshgar\Moadian\Moadian', function ($app) {
             $config = $app['config']['moadian'];
-
-            $privateKeyPath = $config['private_key_path'] ?? storage_path('app/keys/private.pem');
-            $privateKey = file_get_contents($privateKeyPath);
-
-            $certificatePath = $config['certificate_path'] ?? storage_path('app/keys/certificate.crt');
-            $certificate = file_get_contents($certificatePath);
-            $certificate = str_replace("\r\n", '', $certificate);
-
-            $baseUri = $config['base_uri'] ?? 'https://tp.tax.gov.ir/requestsmanager/api/v2/';
-
-            return new Moadian($privateKey, $certificate, $baseUri);
+            if (!$config['multi_moadi']) {
+                $privateKeyPath = $config['private_key_path'] ?? 'app/keys/private.pem';
+                $certificatePath = $config['certificate_path'] ?? 'app/keys/certificate.crt';
+                return new Moadian($config['username'], $privateKeyPath, $certificatePath);
+            }
+            return new Moadian();
         });
     }
 
@@ -41,12 +35,12 @@ class MoadianServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        $this->publishes([
-            __DIR__.'/config/moadian.php' => config_path('moadian.php'),
-        ], 'config');
-
-        if (file_exists(__DIR__.'/helpers.php')) {
-            require_once __DIR__.'/helpers.php';
+        // Publish config file
+        if ($this->app->runningInConsole()) {
+            $this->publishes([
+                __DIR__ . '/config/moadian.php' => config_path('moadian.php'),
+                __DIR__ . '/database/migrations/add_moadian_credentials_to_users_table.php.stub' => database_path('migrations/2025_08_25_134348_add_moadian_credentials_to_users_table.php'),
+            ], 'moadian');
         }
     }
 }

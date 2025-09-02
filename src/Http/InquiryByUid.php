@@ -2,6 +2,7 @@
 
 namespace Jooyeshgar\Moadian\Http;
 
+use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Services\EncryptionService;
 use Jooyeshgar\Moadian\Services\SignatureService;
 use Jooyeshgar\Moadian\Traits\HasToken;
@@ -15,7 +16,7 @@ class InquiryByUid extends Request
 
         $this->path = 'inquiry-by-uid';
         $this->params['uidList'] = $uid;
-        $this->params['fiscalId'] = config('moadian.username');
+        $this->params['fiscalId'] = Moadian::getUsername();
 
         if (!empty($start)) {
             $this->params['start'] = $start;

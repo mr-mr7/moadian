@@ -290,9 +290,9 @@ class InvoiceHeader
      */
     public ?string $an;
 
-    public function __construct(?string $username = null)
+    public function __construct()
     {
-        $this->clientId = $username;
+        $this->clientId = \Jooyeshgar\Moadian\Facades\Moadian::getUsername();
     }
 
     public function toArray(): array

@@ -18,7 +18,7 @@ To install this package, simply run the following command:
 ```bash
 composer require jooyeshgar/moadian
 ```
-## Usage
+## 1- Usage (Single moadi mode)
 
 To use this package, you will need to obtain a username, private key and certificate from intamedia.ir. Once you have your credentials, you can configure the package in your Laravel application's `.env` file:
 
@@ -58,17 +58,13 @@ use Jooyeshgar\Moadian\InvoiceHeader;
 use Jooyeshgar\Moadian\InvoiceItem;
 use Jooyeshgar\Moadian\Payment;
 
-public function sendInvoice($invoiceId = '') {
+public function sendInvoice($invoiceId) {
     $invoiceId = intval($invoiceId);
-    $invoice = Invoice::find($invoiceId);
-
-    if (!$invoice) {
-        throw new Exception('Invoice not found');
-    }
+    $invoice = Invoice::findOrFail($invoiceId);
 
     $timestamp = Carbon::parse($invoice->date)->timestamp * 1000;
 
-    $header = new InvoiceHeader(env('MOADIAN_USERNAME'));
+    $header = new InvoiceHeader();
     $header->setTaxID(Carbon::parse($invoice->date), $invoice->number);
     $header->indati2m = $timestamp;
     $header->indatim = $timestamp;
@@ -138,6 +134,46 @@ public function sendInvoice($invoiceId = '') {
 Note that you need to have a valid Moadian account and credentials to use this plugin.
 
 There are other types of invoices (Cancellation, corrective, Sales return) that you can send with this package. For more information about different types of invoices and how to send them, please refer to the official document.
+
+
+## 2- Multi moadi mode (Multi-user)
+
+  * Publish config and migration file: `php artisan vendor:publish --tag=moadian`
+  * Run `php artisan migrate`
+  * Set `MOADIAN_MULTI_MOADI=true` in env
+  * Configure `multi_moadi_settings` in moadian.php config file
+  * Use `HasMoadianCredentials` trait in user model
+  * 1- Use like this: `Moadian::forUser($userId)->sendInvoice($moadianInvoice);`
+  * 2- Or add the `SetMoadianCredentialsMiddleware` to **global middleware** and then just use: `Moadian::sendInvoice($moadianInvoice);` (**recommended**)
+
+
+#### ** `SetMoadianCredentialsMiddleware` does not work in the background (e.g., jobs queued)
+
+### Send Invoice (multi-user mode)
+
+Working with multi-user mode is almost the same as single-user mode.  
+The only difference is that you either need to:
+
+  * Use the `SetMoadianCredentialsMiddleware` middleware (so the logged-in user will be detected automatically) (**recommended**)
+  * Explicitly specify the user in the beginning with:
+    ```php
+    public function sendInvoice($invoiceId,$userId) {
+        Invoice::forUser($userId); // userId can be logged user id
+  
+        $invoiceId = intval($invoiceId);
+        $invoice = Invoice::findOrFail($invoiceId);
+    
+        $timestamp = Carbon::parse($invoice->date)->timestamp * 1000;
+    
+        $header = new InvoiceHeader();
+        $header->setTaxID(Carbon::parse($invoice->date), $invoice->number);
+        $header->indati2m = $timestamp;
+        .....
+        $info = Moadian::sendInvoice($moadianInvoice);
+        .....
+    }
+    ```
+
 
 ## Useful Links
 

@@ -2,6 +2,7 @@
 
 namespace Jooyeshgar\Moadian\Http;
 
+use Jooyeshgar\Moadian\Facades\Moadian;
 use Jooyeshgar\Moadian\Invoice;
 use Jooyeshgar\Moadian\Services\EncryptionService;
 use Jooyeshgar\Moadian\Services\SignatureService;
@@ -38,7 +39,7 @@ class SendInvoice extends Request
             'payload' => $jwe,
             'header'  => [
                 'requestTraceId' => $this->invoice->getUid(),
-                'fiscalId' => config('moadian.username')
+                'fiscalId' => Moadian::getUsername()
             ]
         ];
     }
