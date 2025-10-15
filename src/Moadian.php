@@ -85,7 +85,7 @@ class Moadian
     public function sendRequest(Request $request)
     {
         if (empty($this->username) || empty($this->signer)) {
-            throw new \Exception('Missing username or private key Or certificate. Using Moadian::forUser() Or set multi_moadi=false in moadian.php');
+            throw new \Exception('Missing username or private key Or certificate');
         }
         $request->prepare($this->signer, $this->encryptor);
 
